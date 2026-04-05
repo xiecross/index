@@ -30,76 +30,157 @@ if "authenticated" not in st.session_state:
 # ── 登录页：弹窗动画（纯视觉）+ 服务端校验 ───────────────────
 if not st.session_state.authenticated:
 
-    # 弹出动画容器（不含密码，安全）
+    # 弹窗：fixed 定位真居中 + 液态玻璃效果
     st.markdown("""
     <style>
-      @keyframes popIn {
-        from { opacity:0; transform:scale(0.65); }
-        to   { opacity:1; transform:scale(1); }
-      }
-      .login-wrap {
+      /* ── 全屏背景覆盖 ── */
+      .login-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
         display: flex;
+        align-items: center;
         justify-content: center;
-        padding-top: 18vh;
+        background: radial-gradient(ellipse at 30% 20%, rgba(13,148,136,0.18) 0%, transparent 55%),
+                    radial-gradient(ellipse at 75% 80%, rgba(99,102,241,0.15) 0%, transparent 50%),
+                    linear-gradient(135deg, #020617 0%, #0b1120 50%, #0f172a 100%);
+        pointer-events: none;
       }
-      .login-modal {
-        background: rgba(15,23,42,0.95);
-        border: 1px solid rgba(45,212,191,0.3);
-        border-radius: 20px;
-        padding: 36px 32px 28px;
-        width: 300px;
-        box-shadow: 0 0 60px rgba(45,212,191,0.12), 0 20px 40px rgba(0,0,0,0.7);
-        backdrop-filter: blur(20px);
-        animation: popIn .35s cubic-bezier(.34,1.56,.64,1) both;
+
+      /* ── 玻璃弹窗 ── */
+      .glass-modal {
+        pointer-events: all;
+        position: relative;
+        width: 320px;
+        padding: 40px 32px 32px;
+        border-radius: 28px;
+        overflow: hidden;
+
+        /* 玻璃基底 */
+        background:
+          linear-gradient(140deg,
+            rgba(255,255,255,0.09) 0%,
+            rgba(45,212,191,0.04) 40%,
+            rgba(99,102,241,0.06) 100%);
+        backdrop-filter: blur(28px) saturate(160%);
+        -webkit-backdrop-filter: blur(28px) saturate(160%);
+
+        /* 液态边框：渐变描边 */
+        border: 1px solid transparent;
+        background-clip: padding-box;
+        box-shadow:
+          0 0 0 1px rgba(45,212,191,0.25),
+          inset 0 1px 0 rgba(255,255,255,0.12),
+          0 8px 32px rgba(0,0,0,0.55),
+          0 0 80px rgba(45,212,191,0.08),
+          0 0 120px rgba(99,102,241,0.06);
+
+        animation: popIn .4s cubic-bezier(.34,1.56,.64,1) both;
       }
-      /* 输入框深色 */
-      .stTextInput input {
-        background: rgba(0,0,0,0.4) !important;
+
+      /* 流光扫过伪元素 */
+      .glass-modal::before {
+        content: '';
+        position: absolute;
+        top: -60%;
+        left: -60%;
+        width: 220%;
+        height: 220%;
+        background: conic-gradient(
+          from 200deg at 50% 50%,
+          transparent 0deg,
+          rgba(45,212,191,0.06) 60deg,
+          rgba(255,255,255,0.04) 80deg,
+          transparent 120deg
+        );
+        animation: spin 6s linear infinite;
+        pointer-events: none;
+      }
+
+      /* 顶部高光条 */
+      .glass-modal::after {
+        content: '';
+        position: absolute;
+        top: 0; left: 10%; right: 10%;
+        height: 1px;
+        background: linear-gradient(90deg,
+          transparent, rgba(255,255,255,0.35), transparent);
+        border-radius: 50%;
+      }
+
+      @keyframes popIn {
+        from { opacity:0; transform:scale(0.72) translateY(16px); filter:blur(4px); }
+        to   { opacity:1; transform:scale(1)   translateY(0);     filter:blur(0); }
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      /* ── 把 Streamlit 原生控件移入弹窗后的样式 ── */
+      .glass-modal .stTextInput input {
+        background: rgba(0,0,0,0.35) !important;
         color: #f1f5f9 !important;
-        border: 1px solid rgba(45,212,191,0.3) !important;
-        border-radius: 10px !important;
+        border: 1px solid rgba(45,212,191,0.28) !important;
+        border-radius: 12px !important;
         text-align: center !important;
         font-size: 15px !important;
         letter-spacing: 2px;
+        transition: border-color .2s, box-shadow .2s !important;
+        backdrop-filter: blur(6px);
       }
-      .stTextInput input::placeholder { letter-spacing: 0; }
-      .stTextInput input:focus {
+      .glass-modal .stTextInput input::placeholder { letter-spacing:0; color:#475569; }
+      .glass-modal .stTextInput input:focus {
         border-color: #2dd4bf !important;
-        box-shadow: 0 0 0 3px rgba(45,212,191,0.15) !important;
+        box-shadow: 0 0 0 3px rgba(45,212,191,0.18), 0 0 20px rgba(45,212,191,0.1) !important;
       }
-      /* 按钮 */
-      .stButton > button {
+      .glass-modal .stButton > button {
         background: linear-gradient(90deg, #0d9488, #2dd4bf) !important;
-        color: white !important;
+        color: #fff !important;
         border: none !important;
-        border-radius: 10px !important;
+        border-radius: 12px !important;
         font-weight: 700 !important;
         font-size: 15px !important;
-        padding: 11px 0 !important;
+        padding: 12px 0 !important;
         width: 100%;
-        transition: opacity .2s;
+        letter-spacing: .5px;
+        box-shadow: 0 4px 24px rgba(45,212,191,0.25) !important;
+        transition: opacity .2s, transform .15s !important;
       }
-      .stButton > button:hover { opacity: .88; }
+      .glass-modal .stButton > button:hover  { opacity:.88 !important; transform:translateY(-1px); }
+      .glass-modal .stButton > button:active { transform:scale(.97); }
+
+      /* 隐藏弹窗外的 Streamlit 输入（fallback 用） */
+      section.main > div > div > div[data-testid="stTextInput"],
+      section.main > div > div > div[data-testid="stButton"] {
+        display: none !important;
+      }
     </style>
-    <div class="login-wrap">
-      <div class="login-modal" id="modal-anchor"></div>
+
+    <div class="login-overlay">
+      <div class="glass-modal" id="modal-anchor"></div>
     </div>
     """, unsafe_allow_html=True)
 
-    # 使用 JS 把 Streamlit 原生组件"移入"弹窗动画容器
+    # JS：将 Streamlit 原生输入移入玻璃弹窗
     st.markdown("""
     <script>
       (function move() {
         const anchor = document.getElementById('modal-anchor');
-        const inputs = document.querySelectorAll('[data-testid="stTextInput"], [data-testid="stButton"]');
+        const inputs = document.querySelectorAll(
+          'section.main [data-testid="stTextInput"], section.main [data-testid="stButton"]'
+        );
         if (anchor && inputs.length >= 2) {
-          inputs.forEach(el => anchor.appendChild(el));
+          inputs.forEach(el => {
+            el.style.display = 'block';
+            anchor.appendChild(el);
+          });
         } else {
-          setTimeout(move, 50);
+          setTimeout(move, 40);
         }
       })();
     </script>
     """, unsafe_allow_html=True)
+
 
     pwd = st.text_input("密码", type="password",
                         placeholder="请输入访问密码",
